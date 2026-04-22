@@ -7,7 +7,7 @@ from datetime import datetime
 
 SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyKDYZIgdCCQiHOnLHLSibhOnz6Vbd9d7kIlTB3H16mh0cGUlnZLuvJSBgHGGpaKcdA0Q/exec"
 TEMPLATE   = r"C:\Users\danie\Desktop\Moltbank CRM\moltbank-template.html"
-OUT        = r"C:\Users\danie\Desktop\Moltbank CRM\moltbank-crm.html"
+OUT        = r"C:\Users\danie\Desktop\Moltbank CRM\index.html"
 REPO_DIR   = r"C:\Users\danie\Desktop\Moltbank CRM"
 
 def fetch_contacts():
@@ -33,7 +33,7 @@ def git_push():
     print("Subiendo a GitHub...")
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     try:
-        subprocess.run(["git", "-C", REPO_DIR, "add", "moltbank-crm.html"], check=True)
+        subprocess.run(["git", "-C", REPO_DIR, "add", "index.html"], check=True)
         result = subprocess.run(
             ["git", "-C", REPO_DIR, "diff", "--cached", "--quiet"],
             capture_output=True
