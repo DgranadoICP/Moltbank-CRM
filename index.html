@@ -750,7 +750,8 @@ function renderTable() {
         ? '<span style="color:var(--green);font-weight:600">✓</span>'
         : '<span style="color:var(--border)">–</span>';
 
-      const fecha = c['Fecha Contacto'] ? new Date(c['Fecha Contacto']).toLocaleDateString('es-VE', { day:'2-digit', month:'short' }) : '—';
+      const fechaD = parseFechaSafe(c['Fecha Contacto']);
+      const fecha = fechaD ? fechaD.toLocaleDateString('es-VE', { day:'2-digit', month:'short', timeZone:'America/Caracas' }) : '—';
       const icp = c['ICP / Por qué'] || c['ICP / Por qu\u00E9'] || c['ICP / Por quΘ'] || '';
       const desde = (c['Enviar desde'] || '').replace('@','');
 
@@ -802,6 +803,41 @@ function goPage(p) {
 // ============================================================
 // CALENDAR
 // ============================================================
+
+// Parsea fechas sin que JS haga conversión de timezone
+// Acepta: ISO string, Date serial de Google Sheets (días desde 30-dic-1899), o string YYYY-MM-DD
+function parseFechaSafe(val) {
+  if (!val) return null;
+  // Si es número (serial de Google Sheets)
+  if (typeof val === 'number') {
+    const msPerDay = 86400000;
+    const epoch = new Date(Date.UTC(1899, 11, 30));
+    return new Date(epoch.getTime() + val * msPerDay);
+  }
+  const s = val.toString().trim();
+  if (!s || s === '' || s === '0') return null;
+  // Si tiene T (ISO con hora) — extraer solo la parte de fecha para evitar UTC shift
+  if (s.includes('T')) {
+    const datePart = s.substring(0, 10); // YYYY-MM-DD
+    const [y, m, d] = datePart.split('-').map(Number);
+    return new Date(y, m - 1, d); // local, sin UTC
+  }
+  // YYYY-MM-DD plano
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  // Fallback
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+
+function formatFecha(val) {
+  const d = parseFechaSafe(val);
+  if (!d || isNaN(d)) return 'Sin fecha';
+  return d.toLocaleDateString('es-VE', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'America/Caracas' });
+}
+
 function renderCalendar() {
   const followups = allContacts.filter(c => {
     const pa = (c['Próxima Acción'] || c['Pr\u00F3xima Acci\u00F3n'] || '').toLowerCase();
@@ -822,9 +858,8 @@ function renderCalendar() {
   } else {
     fuList.innerHTML = followups.slice(0, 10).map(c => {
       const fecha = c['Fecha Próxima Acción'] || c['Fecha Pr\u00F3xima Acci\u00F3n'] || '';
-      const fechaFmt = fecha ? new Date(fecha).toLocaleDateString('es-VE', { weekday:'short', day:'2-digit', month:'short' }) : 'Sin fecha';
       return `<div class="event-card yellow-border">
-        <div class="event-date">${fechaFmt}</div>
+        <div class="event-date">${formatFecha(fecha)}</div>
         <div>
           <div class="event-name">${c['Nombre']}</div>
           <div class="event-desc">${c['Handle X'] || ''} · ${c['Canal'] || ''}</div>
@@ -839,9 +874,8 @@ function renderCalendar() {
   } else {
     meetList.innerHTML = meets.map(c => {
       const fecha = c['Fecha Meet'] || '';
-      const fechaFmt = fecha ? new Date(fecha).toLocaleDateString('es-VE', { weekday:'short', day:'2-digit', month:'short' }) : 'Sin fecha';
       return `<div class="event-card green-border">
-        <div class="event-date">${fechaFmt}</div>
+        <div class="event-date">${formatFecha(fecha)}</div>
         <div>
           <div class="event-name">${c['Nombre']}</div>
           <div class="event-desc">${c['Handle X'] || ''} · ${c['Followers'] || ''} followers</div>
